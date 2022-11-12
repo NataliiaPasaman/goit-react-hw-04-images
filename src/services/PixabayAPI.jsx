@@ -1,7 +1,6 @@
 import axios from "axios";
 
 const BASE_URL = 'https://pixabay.com/api/';
-
 const KEY = '30059530-99c96b166b7120acaaa07225e';
 
 export const pixabayAPI = async (searchQuery, page) => {

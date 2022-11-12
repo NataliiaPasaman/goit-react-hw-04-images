@@ -122,7 +122,7 @@ export class App extends Component {
           color: '#010101',
         }}
       >
-        <SearchBar onSubmit={this.onSubmit} />
+        <SearchBar handleSubmit={this.onSubmit} />
 
         {error && <ToastContainer />}
 
