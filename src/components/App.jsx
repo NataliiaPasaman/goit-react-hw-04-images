@@ -1,5 +1,5 @@
 import React from 'react';
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { SearchBar } from './SearchBar/SearchBar';
 import { pixabayAPI } from '../services/PixabayAPI';
 import { ImageGallery } from './ImageGallery/ImageGallery';
@@ -9,139 +9,106 @@ import { Modal } from 'components/Modal/Modal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-export class App extends Component {
-  state = {
-    searchQuery: '',
-    images: [],
-    isLoader: false,
-    error: null,
-    page: 1,
-    showModal: false,
-    showButton: true,
-    largeImage: '',
-  };
+export const App = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [isLoader, setIsLoader] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImage, setLargeImage] = useState('');
+  const [showButton, setShowButton] = useState(true);
 
-  async componentDidUpdate(prevProps, prevState) {
-    const { searchQuery, page } = this.state;
+  // useEffect(async () => {
+  //   try {
+  //     const imagesResult = await pixabayAPI(searchQuery, page);
+  //     setImages(imagesResult.hits);
+  //     setShowButton(page < Math.ceil(imagesResult.totalHits / 12));
+  //   } catch (error) {
+  //     console.log(error.message);
+  //   }
+  // }, [page, searchQuery]);
 
-    if (prevState.searchQuery !== searchQuery) {
-      this.setState({
-        isLoader: true,
-        images: [],
-        error: null,
-        page: 1,
-        showButton: true,
-      });
+  // useEffect(() => {
+  //   setImages([]);
+  // }, [])
 
-      try {
-        if (page === 1) {
-          const imagesResult = await pixabayAPI(searchQuery, page);
-          this.setState({
-            images: imagesResult.hits,
-            showButton: page < Math.ceil(imagesResult.totalHits / 12),
-          });
-
-          if (imagesResult.hits.length === 0) {
-            const notify = () => toast.error(
-                `Sorry, we didn't find anything for your request ${searchQuery}`,
-                {
-                  position: 'top-center',
-                  autoClose: 3000,
-                  hideProgressBar: false,
-                  closeOnClick: true,
-                  pauseOnHover: true,
-                  draggable: true,
-                  progress: undefined,
-                  theme: 'colored',
-                });
-            this.setState({
-              error: notify(),
-            });
-            return;
-          }
+  useEffect(() => {
+    // setIsLoader(true);
+    setPage(1);
+    try {
+      pixabayAPI(searchQuery, page).then(res => {
+        if (searchQuery) {
+          // setIsLoader(true);
+          setImages(res.hits);
+          setShowButton(page < Math.ceil(res.totalHits / 12));
         }
-      } catch (error) {
-        console.log(error.message);
-      } finally {
-        this.setState({ isLoader: false });
-      }
+        if (res.hits.length === 0) {
+          const notify = () => toast.error(
+              `Sorry, we didn't find anything for your request ${searchQuery}`,
+              { position: 'top-center',
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+                theme: 'colored',
+              });
+          setError(notify());
+          return;
+        }
+      });
+    } catch (error) {
+      console.log(error.message);
+    } finally {
+      setIsLoader(false);
     }
+  }, [page, searchQuery]);
+  
 
-    if (prevState.page !== this.state.page && prevState.searchQuery === searchQuery) {
-      this.setState({ isLoader: true, error: null, showButton: true });
-      try {
-        const imagesResult = await pixabayAPI(searchQuery, page);
-
-        this.setState(prevState => ({
-          images: [...prevState.images, ...imagesResult.hits],
-          showButton: page < Math.ceil(imagesResult.totalHits / 12),
-        }));
-      } catch (error) {
-        console.log(error.message);
-      } finally {
-        this.setState({ isLoader: false });
-      }
-    }
-  }
-
-  onSubmit = searchField => {
+  const onSubmit = searchField => {
     if (!searchField) {
       alert('Enter data in the search field');
       return;
     }
-    this.setState(({ searchQuery }) => ({ searchQuery: searchField }));
+    setSearchQuery(searchField);
   };
 
-  onClickLoad = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const onClickLoad = () => setPage(prevState => page + 1);
+
+  const toogleModal = largeImageURL => {
+    setShowModal(!showModal);
+    setLargeImage(largeImageURL);
   };
 
-  toogleModal = largeImageURL => {
-    this.setState(({ showModal, largeImage }) => ({
-      showModal: !showModal,
-      largeImage: largeImageURL,
-    }));
-  };
+  return (
+    <div
+      style={{
+        height: '100vh',
+        fontSize: 40,
+        color: '#010101',
+      }}
+    >
+      <SearchBar handleSubmit={onSubmit} />
 
-  render() {
-    const {
-      searchQuery,
-      isLoader,
-      error,
-      images,
-      showModal,
-      showButton,
-      largeImage,
-    } = this.state;
+      {error && <ToastContainer />}
 
-    return (
-      <div
-        style={{
-          height: '100vh',
-          fontSize: 40,
-          color: '#010101',
-        }}
-      >
-        <SearchBar handleSubmit={this.onSubmit} />
+      {searchQuery && (
+        <ImageGallery images={images} toogleModal={toogleModal} />
+      )}
+      {isLoader && <Loader />}
 
-        {error && <ToastContainer />}
-
-        {searchQuery && (
-          <ImageGallery images={images} toogleModal={this.toogleModal} />
-        )}
-        {isLoader && <Loader />}
-
-        {!isLoader && showButton && images.length !== 0 && (
-          <LoadButton onClickLoad={this.onClickLoad} />
-        )}
-        {showModal && (
-          <Modal
-            tag={searchQuery}
-            largeImageURL={largeImage}
-            onCloseModal={this.toogleModal}
-          />
-        )}
-      </div>
-    );
-  }
-}
+      {!isLoader && showButton && images.length !== 0 && (
+        <LoadButton onClickLoad={onClickLoad} />
+      )}
+      {showModal && (
+        <Modal
+          tag={searchQuery}
+          largeImageURL={largeImage}
+          onCloseModal={toogleModal}
+        />
+      )}
+    </div>
+  );
+};
