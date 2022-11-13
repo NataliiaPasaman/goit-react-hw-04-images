@@ -19,28 +19,11 @@ export const App = () => {
   const [largeImage, setLargeImage] = useState('');
   const [showButton, setShowButton] = useState(true);
 
-  // useEffect(async () => {
-  //   try {
-  //     const imagesResult = await pixabayAPI(searchQuery, page);
-  //     setImages(imagesResult.hits);
-  //     setShowButton(page < Math.ceil(imagesResult.totalHits / 12));
-  //   } catch (error) {
-  //     console.log(error.message);
-  //   }
-  // }, [page, searchQuery]);
-
-  // useEffect(() => {
-  //   setImages([]);
-  // }, [])
-
   useEffect(() => {
-    // setIsLoader(true);
-    setPage(1);
-    try {
+    setIsLoader(true);
       pixabayAPI(searchQuery, page).then(res => {
         if (searchQuery) {
-          // setIsLoader(true);
-          setImages(res.hits);
+          setImages(prevImages => [...prevImages, ...res.hits]);
           setShowButton(page < Math.ceil(res.totalHits / 12));
         }
         if (res.hits.length === 0) {
@@ -58,12 +41,9 @@ export const App = () => {
           setError(notify());
           return;
         }
-      });
-    } catch (error) {
-      console.log(error.message);
-    } finally {
-      setIsLoader(false);
-    }
+      })
+      .catch (error => console.log(error.message))
+      .finally (() => setIsLoader(false))
   }, [page, searchQuery]);
   
 
@@ -73,9 +53,13 @@ export const App = () => {
       return;
     }
     setSearchQuery(searchField);
+    setPage(1);
+    setImages([]);
+    setError(null);
+    setIsLoader(false);
   };
 
-  const onClickLoad = () => setPage(prevState => page + 1);
+  const onClickLoad = () => setPage(prevPage => prevPage + 1);
 
   const toogleModal = largeImageURL => {
     setShowModal(!showModal);
@@ -91,14 +75,11 @@ export const App = () => {
       }}
     >
       <SearchBar handleSubmit={onSubmit} />
-
       {error && <ToastContainer />}
-
       {searchQuery && (
         <ImageGallery images={images} toogleModal={toogleModal} />
       )}
       {isLoader && <Loader />}
-
       {!isLoader && showButton && images.length !== 0 && (
         <LoadButton onClickLoad={onClickLoad} />
       )}
